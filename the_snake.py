@@ -7,6 +7,7 @@
 GameObject - родительский для всех игровых объектов.
 Snake - дочерний класс реализующий игровой объект змейка.
 Apple - дочерний класс реализующий игровой объект яблоко.
+Stone - дочерний класс, реализующий игровой объект камень
 
 Функции:
 handle_keys - отслеживает действий пользователя.
@@ -41,6 +42,8 @@ APPLE_COLOR = (255, 0, 0)
 
 # Цвет змейки
 SNAKE_COLOR = (0, 255, 0)
+
+STONE_COLOR = (128, 128, 128)
 
 # Скорость движения змейки:
 SPEED = 10
@@ -111,9 +114,16 @@ class Apple(GameObject):
         Метод переопределяет функцию базового класса GameObject.
         Метод отвечает за отрисовку яблока на игровом поле.
         """
-        rect = pygame.Rect(self.position, (GRID_SIZE, GRID_SIZE))
-        pygame.draw.rect(screen, self.body_color, rect)
-        pygame.draw.rect(screen, BORDER_COLOR, rect, 1)
+        pygame.draw.circle(
+            screen,
+            self.body_color,
+            (
+                self.position[0] + 10,
+                self.position[1] + 10
+            ),
+            GRID_SIZE // 2 - 1,
+            10
+        )
 
 
 class Snake(GameObject):
@@ -178,6 +188,36 @@ class Snake(GameObject):
         return self.positions[0]
 
 
+class Stone(Apple):
+    """Класс игровых объектов камень"""
+
+    def __init__(self):
+        super().__init__()
+        self.body_color = STONE_COLOR
+        self.positions = [self.randomize_position()]
+
+    def draw(self):
+        """
+        Метод переопределяет функцию базового класса GameObject.
+        Метод отвечает за отрисовку яблока на игровом поле.
+        """
+        for position in self.positions:
+            rect = pygame.Rect(position, (GRID_SIZE, GRID_SIZE))
+            pygame.draw.rect(screen, self.body_color, rect)
+            pygame.draw.rect(screen, BORDER_COLOR, rect, 1)
+
+    def add_stone(self):
+        """Метод добавляет камень на игровое поле"""
+        new_stone_position = self.randomize_position()
+        self.positions.append(new_stone_position)
+#        self.positions.append(self.randomize_position())
+
+    def reset(self):
+        """Метод сбрасывает игру в изначальное состояние в случае поражения."""
+        self.positions.clear()
+        self.positions.append(self.randomize_position())
+
+
 def main():
     """Выполняется если the_snake запущен напрямую."""
     # Инициализация PyGame:
@@ -185,24 +225,36 @@ def main():
     # Тут нужно создать экземпляры классов.
     apple = Apple()
     snake = Snake()
+    stone = Stone()
 
     while True:
         clock.tick(SPEED)
         apple.draw()
         snake.draw()
+        stone.draw()
         handle_keys(snake)
         snake.update_direction()
         snake.move()
         if snake.positions[0] == apple.position:
             snake.length += 1
-            apple = Apple()
             while apple.position in snake.positions:
-                apple = Apple()
+                apple.position = Apple.randomize_position(apple)
+            while apple.position in stone.positions:
+                apple.position = Apple.randomize_position(apple)
             apple.draw()
+            stone.add_stone() 
+            while stone.positions[-1] in snake.positions:
+                stone.positions[-1] = Stone.randomize_position(apple)
+            while stone.positions[-1] == apple.position:
+                stone.positions[-1] = Stone.randomize_position(apple)
+            stone.draw()
         if snake.positions[0] in snake.positions[1:]:
             snake.reset()
-            snake.draw()
-            apple.draw()
+            stone.reset()
+        if snake.positions[0] in stone.positions:
+            snake.reset()
+            stone.reset()
+
         pygame.display.update()        # Тут опишите основную логику игры.
         # ...
 
