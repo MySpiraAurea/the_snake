@@ -14,7 +14,7 @@ handle_keys - отслеживает действий пользователя.
 Случайный выбор направления при новом старте в методе reset
 класса Snake.
 """
-
+import game
 from random import choice, randint
 
 import pygame
@@ -180,8 +180,15 @@ class Snake(GameObject):
 
     # Затирание последнего сегмента
         if self.last:
+            color = game.BOARD_BACKGROUND_COLOR
+            noise = game.NOISE_STRENGTH
             last_rect = pygame.Rect(self.last, (GRID_SIZE, GRID_SIZE))
-            pygame.draw.rect(screen, BOARD_BACKGROUND_COLOR, last_rect)
+            pygame.draw.rect(
+                screen,
+                [randint(color[index] - noise, color[index] + noise)
+                    for index in range(3)],
+                last_rect
+            )
 
     def get_head_position(self):
         """Метод возвращает координату головы объекта Snake."""
@@ -221,44 +228,61 @@ class Stone(Apple):
 def main():
     """Выполняется если the_snake запущен напрямую."""
     # Инициализация PyGame:
-    pygame.init()
+#    pygame.init()
+    game.draw_texture_on_background()
     # Тут нужно создать экземпляры классов.
     apple = Apple()
     snake = Snake()
     stone = Stone()
+    game.game.switch_on()
 
-    while True:
-        clock.tick(SPEED)
+    while game.game.is_run():
+        screen.blit(game.background_surface, (0, 0))
         apple.draw()
         snake.draw()
         stone.draw()
         handle_keys(snake)
-        snake.update_direction()
-        snake.move()
-        if snake.positions[0] == apple.position:
-            snake.length += 1
-            while apple.position in snake.positions:
-                apple.position = Apple.randomize_position(apple)
-            while apple.position in stone.positions:
-                apple.position = Apple.randomize_position(apple)
-            apple.draw()
-            stone.add_stone() 
-            while stone.positions[-1] in snake.positions:
-                stone.positions[-1] = Stone.randomize_position(apple)
-            while stone.positions[-1] == apple.position:
-                stone.positions[-1] = Stone.randomize_position(apple)
-            stone.draw()
-        if snake.positions[0] in snake.positions[1:]:
-            snake.reset()
-            stone.reset()
-        if snake.positions[0] in stone.positions:
-            snake.reset()
-            stone.reset()
+        if game.game.menu_is_open():
+            game.game_caption('Змейка || Основное меню')
+            if game.quit_pressed():
+                game.game.close_menu()
 
+            game.draw_menu()
+            game.handle_keys_menu()
+            if game.game.reset:
+                snake.reset()
+                stone.reset()
+                game.reset = False
+        else:
+            if game.quit_pressed():
+                game.game.open_menu()
+            snake.update_direction()
+            snake.move()
+            if snake.positions[0] == apple.position:
+                snake.length += 1
+                while apple.position in snake.positions:
+                    apple.position = Apple.randomize_position(apple)
+                while apple.position in stone.positions:
+                    apple.position = Apple.randomize_position(apple)
+                apple.draw()
+                stone.add_stone()
+                while stone.positions[-1] in snake.positions:
+                    stone.positions[-1] = Stone.randomize_position(apple)
+                while stone.positions[-1] == apple.position:
+                    stone.positions[-1] = Stone.randomize_position(apple)
+                stone.draw()
+            if snake.positions[0] in snake.positions[1:]:
+                snake.reset()
+                stone.reset()
+            if snake.positions[0] in stone.positions:
+                snake.reset()
+                stone.reset()
+        clock.tick(SPEED)
         pygame.display.update()        # Тут опишите основную логику игры.
         # ...
+    game.quit_game()
 
-
+ 
 if __name__ == '__main__':
     main()
 
