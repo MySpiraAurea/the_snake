@@ -48,11 +48,16 @@ SPEED = 10
 
 # Словарь для управления движением
 MOVEMENT_KEYS = {
-    pygame.K_UP: UP,
-    pygame.K_DOWN: DOWN,
-    pygame.K_LEFT: LEFT,
-    pygame.K_RIGHT: RIGHT,
+    (pygame.K_UP, LEFT): UP,
+    (pygame.K_UP, RIGHT): UP,
+    (pygame.K_DOWN, LEFT): DOWN,
+    (pygame.K_DOWN, RIGHT): DOWN,
+    (pygame.K_RIGHT, UP): RIGHT,
+    (pygame.K_RIGHT, DOWN): RIGHT,
+    (pygame.K_LEFT, UP): LEFT,
+    (pygame.K_LEFT, DOWN): LEFT,
 }
+
 
 
 # Настройка игрового окна:
@@ -65,15 +70,21 @@ pygame.display.set_caption('Змейка')
 clock = pygame.time.Clock()
 
 
-def handle_keys(game_object):
+def handle_keys(snake):
     """Функция обработки действий пользователя."""
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             pygame.quit()
             raise SystemExit
         if event.type == pygame.KEYDOWN:
-            if event.key in MOVEMENT_KEYS:
-                game_object.update_direction(MOVEMENT_KEYS[event.key])
+            new_direction = MOVEMENT_KEYS.get(
+                (event.key, snake.direction),
+                snake.direction
+            )
+            print(new_direction)
+            TURN_KEYS = set(event_key for event_key, _ in MOVEMENT_KEYS)
+            if event.key in TURN_KEYS:
+                snake.direction = new_direction
 
 
 class GameObject:
@@ -93,13 +104,15 @@ class GameObject:
 
     def draw_cell(self, position, color=None):
         """Метод отвечает за отрисовку одной клетки игрового поля"""
-        x, y = position
+        position = position or self.position
         color = color or self.body_color
-        pygame.draw.rect(
-            screen,
-            color,
-            (x, y, GRID_SIZE, GRID_SIZE)
+        rect = pygame.Rect(
+            position,
+            (GRID_SIZE, GRID_SIZE)
         )
+        pygame.draw.rect(screen, color, rect)
+        if color != BOARD_BACKGROUND_COLOR:
+            pygame.draw.rect(screen, BORDER_COLOR, rect, 1)
 
 
 class Apple(GameObject):
@@ -108,15 +121,13 @@ class Apple(GameObject):
     def __init__(self, ):
         super().__init__()
         self.body_color = APPLE_COLOR
-        self.position = None
+        self.position = SCREEN_CENTER
 
     def randomize_position(self, occupied_positions):
         """Метод задает случайное положение яблока на игровом поле."""
-        self.position = (randint(0, GRID_WIDTH - 1) * GRID_SIZE,
-                         randint(0, GRID_HEIGHT - 1) * GRID_SIZE)
         while self.position in occupied_positions:
-            self.position = (randint(0, GRID_WIDTH - 1),
-                             randint(0, GRID_HEIGHT - 1))
+            self.position = (randint(0, GRID_WIDTH - 1) * GRID_SIZE,
+                             randint(0, GRID_HEIGHT - 1) * GRID_SIZE)
 
     def draw(self):
         """
@@ -135,8 +146,7 @@ class Snake(GameObject):
 
     def update_direction(self, next_direction=None):
         """Метод переопределяет атрибут self.direction класса Snake."""
-        if (-next_direction[0], -next_direction[1]) != self.direction:
-            self.direction = next_direction
+        self.direction = next_direction
 
     def move(self):
         """
@@ -145,9 +155,10 @@ class Snake(GameObject):
         Удаляет кортеж с координатами последней клетки из списка.
         """
         x, y = self.get_head_position()
+        current_x, current_y = self.direction
         new_head_position = (
-            (x + self.direction[0] * GRID_SIZE) % SCREEN_WIDTH,
-            (y + self.direction[1] * GRID_SIZE) % SCREEN_HEIGHT
+            (x + current_x * GRID_SIZE) % SCREEN_WIDTH,
+            (y + current_y * GRID_SIZE) % SCREEN_HEIGHT
         )
         self.positions.insert(0, new_head_position)
         if len(self.positions) > self.length:
@@ -165,7 +176,7 @@ class Snake(GameObject):
     def draw(self):
         """Метод отвечает за отрисовку объекта Snake на игровом поле."""
     # Отрисовка головы змейки
-        self.draw_cell(self.positions[0], SNAKE_COLOR)
+        self.draw_cell(self.get_head_position(), SNAKE_COLOR)
 
     # Затирание последнего сегмента
         if self.last:
@@ -187,7 +198,7 @@ def main():
         clock.tick(SPEED)
         handle_keys(snake)
         snake.move()
-        if snake.positions[0] == apple.position:
+        if snake.get_head_position() == apple.position:
             snake.length += 1
             apple = Apple()
             apple.randomize_position(snake.positions)
