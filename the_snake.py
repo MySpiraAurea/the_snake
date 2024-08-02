@@ -59,6 +59,7 @@ MOVEMENT_KEYS = {
 }
 
 
+
 # Настройка игрового окна:
 screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT), 0, 32)
 
