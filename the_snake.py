@@ -80,7 +80,6 @@ def handle_keys(snake):
                 (event.key, snake.direction),
                 snake.direction
             )
-            print(new_direction)
             TURN_KEYS = set(event_key for event_key, _ in MOVEMENT_KEYS)
             if event.key in TURN_KEYS:
                 snake.direction = new_direction
